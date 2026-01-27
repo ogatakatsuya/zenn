@@ -117,7 +117,7 @@ AppConfig を利用する上で、以下の3つの階層構造を理解する必
 通常、AppConfig から設定を取得するには AWS SDK を介して `GetLatestConfiguration` API を呼び出す必要がありますが、本プロジェクトでは **AWS AppConfig Agent** を採用しています。
 
 - **AppConfig Agent とは**: アプリケーションのサイドカー（または同じホスト上のプロセス）として動作するローカルプロキシです。
-- **ポーリング (Polling)**: Agent はバックグランドで定期的に AWS AppConfig サービスに対して最新の設定がないか確認（ポーリング）を行います。
+- **ポーリング (Polling)**: Agent はバックグランドで定期的に AWS AppConfig サービスに対して最新の設定がないか確認（ポーリング）を行います。デフォルトでは45秒間隔ですが、環境変数 `POLL_INTERVAL` で調整可能です。
 - **ローカルキャッシュ**: Agent は取得した設定をローカルメモリに保持し、HTTP エンドポイント（デフォルト 2772番ポート）として公開します。
 
 ## 実装の詳細
@@ -144,7 +144,7 @@ https://qiita.com/t_tsuchida/items/64ec5d8af2ce326b962e
 
 ### 3. プロンプトの動的取得 
 
-アプリケーション側では、AppConfig Agent が公開しているローカル HTTP エンドポイント（デフォルト 2772番ポート）を叩きます。エージェントが一定間隔で設定をポーリングして最新化してくれるため、アプリケーションは単に HTTP GET を投げれば常に（ほぼ）最新のプロンプトを取得できます。
+アプリケーション側では、AppConfig Agent が公開しているローカル HTTP エンドポイント（デフォルト 2772番ポート）を叩きます。エージェントが一定間隔（デフォルト45秒、設定変更可能）で設定をポーリングして最新化してくれるため、アプリケーションは単に HTTP GET を投げれば常に（ほぼ）最新のプロンプトを取得できます。
 
 また、推論のたびに外部リクエストが発生するのを防ぐため、シンプルなキャッシュ機構（TTL 5秒程度）を設けています。
 
@@ -169,6 +169,13 @@ https://github.com/ogatakatsuya/deploy-prompt/blob/main/backend/src/llm/gemini.p
 4. `aws appconfig start-deployment` を叩き、作成したバージョンを対象の Environment にデプロイ開始
 
 https://github.com/ogatakatsuya/deploy-prompt/blob/main/.github/workflows/deploy-prompt.yml
+
+### 6. デプロイ戦略
+
+AppConfig の大きな利点は、Git で管理するだけでは難しい「デプロイの安全性」を担保できる点です。
+
+- **デプロイ戦略 (Deployment Strategy)**: `AllAtOnce`（一括）、`Linear`（線形）、`Canary`（カナリア）など、新しいプロンプトをどのくらいの時間をかけて全適用するかを選択できます。例えば「10分かけて徐々に適用」といった設定が可能です。
+- **ロールバック**: デプロイ完了後、直ちに成功とするのではなく、一定の監視期間（ベーキングタイム）を設けることができます。何かトラブルが生じた際にはこの期間中にロールバックを行なうことができます。
 
 ---
 
