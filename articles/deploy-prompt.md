@@ -6,7 +6,7 @@ topics: ["ai", "llm", "prompt", "aws"]
 published: false
 ---
 
-# はじめに
+## はじめに
 AIの急激な進歩に伴い、さまざまなアプリケーションにMachine LearningやLLMが組み込まれていることが多くなっているように感じます。
 
 > 従来のプロダクトは「完成させて出荷するもの」だった。しかし、生成AIを組み込んだプロダクトは、「リリース後に学習し続ける生態系」として設計される。
@@ -20,7 +20,7 @@ https://takoratta.hatenablog.com/entry/product-design-in-ai-native-era
 
 本記事では、AIネイティブなプロダクト開発において、どのようにプロンプトをアプリケーションコードと疎結合に管理し、本番の実行環境にデプロイメントしていくかを、デモアプリケーションを用いて説明していきます。
 
-# TL;DR
+## TL;DR
 
 - **課題**:
     - プロンプトだけを更新・比較・ロールバックすることが困難
@@ -32,14 +32,14 @@ https://takoratta.hatenablog.com/entry/product-design-in-ai-native-era
   - プロンプトエンジニアリングのライフサイクルを開発レポジトリから分離できる
   - 言語中立な YAML 形式で管理でき、バージョニングや環境ごとの配信も容易
 
-# 対象読者
+## 対象読者
 
 - LLM アプリケーションを開発・運用しているエンジニア
 - プロンプトエンジニアリングのPDCAサイクルを高速化したい方
 - マイクロサービスやコンウェイの法則に基づいたレポジトリの分割設計に興味がある方
 - AWS AppConfig の実用的なユースケース（特に LLM 分野）を知りたい方
 
-## プロンプト管理における設計思想
+### プロンプト管理における設計思想
 
 レポジトリやモジュールを分割する基準の一つに**コンウェイの法則**（システムを設計する組織は、その組織のコミュニケーション構造を模倣した設計を生み出す）があります。
 
@@ -55,7 +55,7 @@ https://takoratta.hatenablog.com/entry/product-design-in-ai-native-era
 ![](https://storage.googleapis.com/zenn-user-upload/c08fde248e64-20260126.png)
 *プロンプト管理における設計思想*
 
-## LLM アプリケーションに求められるプロンプト管理の要件
+### LLM アプリケーションに求められるプロンプト管理の要件
 
 以上の思想に基づき、本記事では以下の要件を定義しました。
 
@@ -64,20 +64,20 @@ https://takoratta.hatenablog.com/entry/product-design-in-ai-native-era
 - **プロンプトを異なるレポジトリで管理することができる**: プロンプト専用のレポジトリで独立して管理できること。
 - **プロンプトがデプロイされたら即座にクラウドの環境に反映される**: デプロイされたプロンプトが、実行中の環境に（再起動なしで）即座に反映されること。
 
-# 代表的な プロンプト管理 ツール
+## 代表的な プロンプト管理 ツール
 
 プロンプトエンジニアリングのライフサイクルを管理するための「LLMOps」と呼ばれる分野が急速に発展しており、いくつかのツールがデファクトスタンダードとして台頭してきています。
 
-## MLflow
+### MLflow
 機械学習ライフサイクル管理のデファクトスタンダードです。近年はプロンプトエンジニアリング機能も強化されており、UI 上でプロンプトを試行錯誤し、結果を比較・評価する機能があります。実験管理（Experiment Tracking）と密結合しており、どのプロンプトでどの指標が出たかを詳細に追跡できるのが強みです。
 
-## LangSmith (LangChain)
+### LangSmith (LangChain)
 LangChain 開発元のツールです。「LangChain Hub」と連携し、プロンプトのバージョン管理や共有が可能です。強力なプレイグラウンド機能を持ち、ブラウザ上でプロンプトの修正から実行テストまで行えるため、非エンジニアでも扱いやすいUIが特徴です。
 
-## LangFuse
+### LangFuse
 オープンソースの LLM エンジニアリングプラットフォームです。プロンプト管理機能（Prompt Management）を持ち、SDK 経由でプロンプトを取得できます。キャッシュ機能も備えており、SaaS 版だけでなくセルフホストが可能である点が魅力です。
 
-# 既存ツールの課題
+## 既存ツールの課題
 
 しかし、これらの専用ツールは非常に高機能である反面、実際のプロジェクト導入にあたってはいくつかの課題も存在します。
 
@@ -87,14 +87,14 @@ LangChain 開発元のツールです。「LangChain Hub」と連携し、プロ
 
 特に、「すでに AWS 等で堅牢なインフラを構築しているため、管理をクラウドプロバイダ内で完結させたい」「コードの一部というよりは、より軽量な『設定値』としてプロンプトを扱いたい」というニーズに対しては、これらの専用ツールは少し重厚すぎると感じるケースもあるかと思います。
 
-# デモアプリケーション
+## デモアプリケーション
 
 本記事では、汎用的な動的設定配信サービスである **AWS AppConfig** を活用し、LLMOpsツールに依存しすぎない、インフラネイティブなプロンプト管理のデモを紹介します。
 
 本記事で紹介するデモアプリケーションのコードは以下のレポジトリで公開してます。
 https://github.com/ogatakatsuya/deploy-prompt
 
-# 技術構成
+## 技術構成
 より実用的な構成にするため、ECS Fargateを主軸とした構成にしました。
 
 プロンプトはAppConfigで管理し、AppConfig Agentを介してAP Serverはプロンプトを取得します。AppConfig Agentは定期的にAppConfigをポーリングし、キャッシュするため、外部サービスとの通信を発生させることなくプロンプトを取得でき、ネットワークレイテンシの低減および安定したレスポンスを実現することができます。
@@ -104,7 +104,7 @@ https://github.com/ogatakatsuya/deploy-prompt
 
 
 
-## AWS AppConfig の主要概念
+### AWS AppConfig の主要概念
 
 AppConfig を利用する上で、以下の3つの階層構造を理解する必要があります。
 
@@ -112,7 +112,7 @@ AppConfig を利用する上で、以下の3つの階層構造を理解する必
 - **Environment**: デプロイ先の環境を定義します（例：`dev`, `staging`, `prod`）。環境ごとに異なる設定（プロンプト）を割り当てることができます。
 - **Configuration Profile**: 具体的な設定項目の定義です。今回は `prompts` という名前で、YAML 形式のプロンプト定義を管理しています。
 
-## AppConfig Agent とポーリングの仕組み
+### AppConfig Agent とポーリングの仕組み
 
 通常、AppConfig から設定を取得するには AWS SDK を介して `GetLatestConfiguration` API を呼び出す必要がありますが、本プロジェクトでは **AWS AppConfig Agent** を採用しています。
 
@@ -120,9 +120,9 @@ AppConfig を利用する上で、以下の3つの階層構造を理解する必
 - **ポーリング (Polling)**: Agent はバックグランドで定期的に AWS AppConfig サービスに対して最新の設定がないか確認（ポーリング）を行います。
 - **ローカルキャッシュ**: Agent は取得した設定をローカルメモリに保持し、HTTP エンドポイント（デフォルト 2772番ポート）として公開します。
 
-# 実装の詳細
+## 実装の詳細
 
-## 1. プロンプトの定義 (YAML)
+### 1. プロンプトの定義 (YAML)
 
 プロンプトは特定の言語に依存しないよう YAML 形式で記述します。ここでは LangChain のプロンプト設定ファイル形式に準拠させています。
 
@@ -132,7 +132,7 @@ https://github.com/ogatakatsuya/deploy-prompt/blob/main/prompts/prompts.yaml#L1-
 
 https://zenn.dev/taku_sid/articles/20250511_yaml_prompt
 
-## 2. AppConfig Agent のサイドカー配置
+### 2. AppConfig Agent のサイドカー配置
 
 AWS AppConfig Agent をサイドカーとして動かします。ローカル開発時は、ホストの `prompts` ディレクトリをマウントし、`LOCAL_DEVELOPMENT_DIRECTORY` を指定することで、実際の AWS 環境を介さずに動作確認が可能です。
 
@@ -142,7 +142,7 @@ https://github.com/ogatakatsuya/deploy-prompt/blob/main/docker-compose.yml#L2-L8
 
 https://qiita.com/t_tsuchida/items/64ec5d8af2ce326b962e
 
-## 3. プロンプトの動的取得 
+### 3. プロンプトの動的取得 
 
 アプリケーション側では、AppConfig Agent が公開しているローカル HTTP エンドポイント（デフォルト 2772番ポート）を叩きます。エージェントが一定間隔で設定をポーリングして最新化してくれるため、アプリケーションは単に HTTP GET を投げれば常に（ほぼ）最新のプロンプトを取得できます。
 
@@ -151,13 +151,13 @@ https://qiita.com/t_tsuchida/items/64ec5d8af2ce326b962e
 AP Server側では、プロンプト取得のためのクライアントを実装すると良いと思います。
 https://github.com/ogatakatsuya/deploy-prompt/blob/main/backend/src/prompt/manager.py
 
-## 4. LLM クライアントでの利用
+### 4. LLM クライアントでの利用
 
 取得した設定値は、LangChain の `load_prompt_from_config` 等を利用してパースし、Gemini などの LLM クライアントのシステムプロンプトとして注入します。
 
 https://github.com/ogatakatsuya/deploy-prompt/blob/main/backend/src/llm/gemini.py#L48-L52
 
-## 5. GitHub Actionsを用いたプロンプトのデプロイ
+### 5. GitHub Actionsを用いたプロンプトのデプロイ
 
 最後に、編集したプロンプトをmainブランチにマージした時に、自動で本番環境にデプロイするワークフローをGitHub Actionsで行います。
 
@@ -172,7 +172,7 @@ https://github.com/ogatakatsuya/deploy-prompt/blob/main/.github/workflows/deploy
 
 ---
 
-# デモ
+## デモ
 
 まずは以下のようなプロンプトで、デプロイしてみます。
 
@@ -207,7 +207,7 @@ Github Actionsに設定しているワークフローが走り、AppConfigのデ
 
 ![](https://storage.googleapis.com/zenn-user-upload/c43a3b084760-20260126.png =500x)
 
-# さらにスケールさせる
+## さらにスケールさせる
 
 今回はシンプルなアプリケーションの構築ですが、GitFlowや、GitHubの力を用いて、dev, stg, prodなどの環境別のデプロイメントや、GitHub Actionsの実行環境を用いたプロンプトのリントチェック、LLMを用いた生成精度の自動テスト・評価環境の整備など、柔軟性のあるさまざまな工夫を行うことができると考えています。
 
@@ -216,7 +216,7 @@ AppConfig 単体には評価機能はありませんが、CI/CD パイプライ�
 
 また、今回は簡略化のために、モノレポで構築していますが、プロンプト専用のレポジトリを用意することもできますし、複数ファイルでプロンプト開発を行い、CIで結合したり、複数のAppConfig Profileで個別にプロンプトを管理することも可能だと思います。
 
-# まとめ
+## まとめ
 
 プロンプトを「デプロイが必要なコード」から「動的に注入可能な設定」へと昇華させることで、LLM アプリケーションの運用サイクルは劇的に改善されます。
 
