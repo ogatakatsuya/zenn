@@ -1,5 +1,5 @@
 ---
-title: "プロンプトをデプロイする"
+title: "AWS AppConfig でプロンプトをデプロイする"
 emoji: "🚀"
 type: "tech"
 topics: ["ai", "llm", "prompt", "aws"]
