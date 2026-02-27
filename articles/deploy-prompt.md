@@ -3,7 +3,7 @@ title: "AWS AppConfig でプロンプトをデプロイする"
 emoji: "🚀"
 type: "tech"
 topics: ["ai", "llm", "prompt", "aws"]
-published: false
+published: true
 ---
 
 ## はじめに
